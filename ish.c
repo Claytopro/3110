@@ -16,7 +16,7 @@
 #include <math.h>
 
 
-void executeWait(char **arg, int fileBool);
+void executeWait(char **arg, int fileBool, int waitBool);
 void executeBackground(char **arg, int fileBool);
 void GCD(char** args);
 void argCount(char **args);
@@ -40,6 +40,7 @@ int main(){
   char *argument1 = "NULL";
   int i =0;
   int fileBool=0;
+   int waitBool=0;
 
 
   //userID = malloc(sizeof(char)*100);
@@ -51,7 +52,11 @@ int main(){
   while (1)
   {
   /* Wait for input */
-    printf ("[%s@%s]$",userID,hostName);
+    if(getuid()==0){
+      printf ("[%s@%s]#",userID,hostName);
+    }else{
+      printf ("[%s@%s]$",userID,hostName);
+    }
     args = getln();
 
     if( args[0] != NULL){
@@ -73,7 +78,7 @@ int main(){
     }else{
 
       while(args[i] != NULL) {
-        if(strcmp(args[i], ">")==0){
+        if(strcmp(args[i], ">")==0 || strcmp(args[i], "<")==0){
           fileBool =i;
         }
         i++;
@@ -83,10 +88,11 @@ int main(){
 
       if(strcmp(args[i], "&") == 0){
         args[i] = NULL;
-        executeBackground(args,fileBool);
-      }else{
-        executeWait(args,fileBool);
+        waitBool =1;
       }
+
+      executeWait(args,fileBool,waitBool);
+      waitBool =0;
 
     }
 
@@ -96,10 +102,10 @@ int main(){
   return 0;
 }
 
-void executeWait(char **arg, int fileBool){
+void executeWait(char **arg, int fileBool, int waitBool){
   pid_t  pid;
   int    status;
-  FILE *fp;
+
 
   if ((pid = fork()) < 0) {
        printf("A: forking child process failed\n");
@@ -109,8 +115,15 @@ void executeWait(char **arg, int fileBool){
        /*cool thing to do is run the shell inside the shell */
        // > or < sign was found at fileBool location in arg
        if(fileBool != 0){
-         fp = freopen(arg[fileBool+1], "w+", stdout);
-         arg[fileBool] = NULL;
+         if(strcmp(arg[fileBool],">")==0){
+           freopen(arg[fileBool+1], "w+", stdout);
+           //could free here but idc
+           arg[fileBool] = NULL;
+         }else{
+           //get from file
+           freopen(arg[fileBool+1], "r", stdin);
+           arg[fileBool] = NULL;
+         }
 
        }
 
@@ -118,32 +131,14 @@ void executeWait(char **arg, int fileBool){
             printf("ALERT: exec failed\n");
             exit(1);
        }
-       fclose(fp);
-  }
-  else {
-       //loops through until child process is done, waiting for child execution
-       while (wait(&status) != pid){}
-    }
 
+  }
+      if(waitBool ==0){
+        //loops through until child process is done, waiting for child execution
+        while (wait(&status) != pid){}
+      }
 }
 
-void executeBackground(char **arg,int fileBool){
-  pid_t  pid;
-
-  if ((pid = fork()) < 0) {
-       printf("A: forking child process failed\n");
-       exit(1);
-  }  /* cildprocess should have process id of zero.*/
-  else if (pid == 0){
-       /*cool thing to do is run the shell inside the shell */
-       if (execvp(*arg, arg) < 0) {
-            printf("ALERT: exec failed\n");
-            exit(1);
-       }
-  }
-  //dont have to wait for command to end before coninuing.
-
-}
 
 //find gcd of entered values
 void GCD(char** args){
