@@ -6,12 +6,13 @@ int _argcount = 0;
 
 WORD	[a-zA-Z0-9\/\.-]+
 SPECIAL	[()><|&;*]
+DELIM \"[^"]*\"
 
 %%
 	_argcount = 0;
 	_args[0] = NULL;
 
-{WORD}|{SPECIAL} {
+{DELIM}|{WORD}|{SPECIAL} {
 	  if(_argcount < _numargs-1) {
 	    _args[_argcount++] = (char *)strdup(yytext);
 	    _args[_argcount] = NULL;

@@ -5,18 +5,26 @@
 
 #include <stdlib.h>
 #include "stdio.h"
+#include <ctype.h>
 #include "string.h"
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/syscall.h>
 #include <signal.h>
+#include <pwd.h>
+#include <math.h>
+
 
 void executeWait(char **arg);
 void executeBackground(char **arg);
-int GCD(char** args);
+void GCD(char** args);
 void argCount(char **args);
-
+char * getUserName(uid_t uid);
+int isHex(int c);
+int power(int base,int exponent);
+int gcdRECURSIVE(int x, int y);
+void findDay(char**);
 
 const char *mypath[] = { "./",
 "/usr/bin/", "/bin/", NULL
@@ -27,23 +35,30 @@ int main(){
 
   /*used for parsing input */
   char hostName[100];
-  int userID;
+  char *userID;
   char **args;
   char *argument1 = "NULL";
+  int i=0;
 
-  userID = getuid();
+
+  //userID = malloc(sizeof(char)*100);
+  //userID = getUser(getuid());
+  userID = getUserName(getuid());
+
   gethostname(hostName,100);
   /*contineus to get arguments as long as exit is not input*/
   while (1)
   {
   /* Wait for input */
-    printf ("%s:%d:prompt> ",hostName,userID);
+    printf ("[%s@%s]$",userID,hostName);
     args = getln();
 
     if( args[0] != NULL){
       argument1 = args[0];
     }
-  //  printf("arG:%s, strcmp:%d:\n",argument1,strcmp strcmp(argument1,"exit"));
+
+//    printf("arg 1:%s\narg2:%s\n",argument1,args[1] );
+
     if(strcmp(argument1,"exit") == 0){
       exit(1);
     }
@@ -52,20 +67,20 @@ int main(){
       argCount(args);
     }else if(strcmp(argument1,"gcd")==0){
       GCD(args);
+    }else if(strcmp(argument1,"day")==0){
+      findDay(args);
     }else{
 
+      // while(args[i] != NULL) i++;
+      //
+      // if(strcmp(args[i], "&")==0){
+      //   args[i] = NULL;
+      //   executeBackground(args);
+      // }else{
+      // }
       executeWait(args);
     }
 
-
-  /* If necessary locate executable using mypath array */
-
-  /* Launch executable */
-  // if (fork () == 0) {
-  //
-  // } else {
-  //
-  // } // end of if
 
   }
 
@@ -95,13 +110,13 @@ void executeWait(char **arg){
 }
 
 void executeBackground(char **arg){
+  pid_t  pid;
 
-
-  if ( fork() < 0) {
+  if ((pid = fork()) < 0) {
        printf("A: forking child process failed\n");
        exit(1);
   }  /* cildprocess should have process id of zero.*/
-  else {
+  else if (pid == 0){
        /*cool thing to do is run the shell inside the shell */
        if (execvp(*arg, arg) < 0) {
             printf("ALERT: exec failed\n");
@@ -112,10 +127,91 @@ void executeBackground(char **arg){
 
 }
 
-int GCD(char** args){
+//find gcd of entered values
+void GCD(char** args){
+  char *num;
+
+  int  first,second,numlength,hexCount;
+
+  //if there are to many arugments
+  if(args[3] != NULL || args[2] ==NULL || args[1]==NULL) {
+    printf("INVALID NUMBER OF ARGUMENTS\n");
+    return ;
+  }
+
+  num = args[1];
+  hexCount =0;
+  first =0;
 
 
-  return 1;
+  //num1 is hexadecimal
+  if(num[0] == '0' && num[1] == 'x'){
+    numlength = strlen(num);
+
+    while(numlength >2){
+      numlength--;
+      if(isdigit(num[numlength]) > 0){
+        first += (num[numlength] - 48) * power(16,hexCount);
+
+        hexCount++;
+
+      }else if(isHex(num[numlength])!=0){
+
+        first += isHex(num[numlength])*power(16,hexCount);
+        hexCount++;
+      }
+
+    }
+    //number is decimal
+  }else{
+    first = atoi(num);
+    while(numlength>0){
+      numlength--;
+      if(isdigit(num[numlength]) <= 0){
+        printf("INVALID ENTRY\n");
+        return;
+      }
+    }
+  }
+
+  //do second number
+  num = args[2];
+  second =0;
+  hexCount =0;
+
+  if(num[0] == '0' && num[1] == 'x'){
+    numlength = strlen(num);  printf("first:%d:%d\n",first,second );
+
+
+    while(numlength >2){
+      numlength--;
+      if(isdigit(num[numlength]) > 0){
+        second += (num[numlength] - 48) * power(16,hexCount);
+        printf("sec:%d\n",second );
+        hexCount++;
+      }else if(isHex(num[numlength])!=0){
+  printf("first:%d:%d\n",first,second );
+
+        second += isHex(num[numlength])*power(16,hexCount);
+        hexCount++;
+      }
+
+    }
+    //number is decimal
+  }else{
+    second = atoi(num);
+    while(numlength>0){
+      numlength--;
+      if(isdigit(num[numlength]) <= 0){
+        printf("INVALID ENTRY\n");
+        return;
+      }
+    }
+  }
+
+
+  printf("GCD IS %d\n",gcdRECURSIVE(first,second));
+
 }
 
 
@@ -133,4 +229,144 @@ void argCount(char **args){
   }
 
   printf("%s\n",args[i-1] );
+}
+
+//checks if it is a hexadecimal letter A-F, return if false
+//returns value of letter if it is valid
+int isHex(int c){
+  // valid lower case hex
+  if(c <103 && c>96){
+    return c-87;
+  }
+  // valid uppercase hex
+  if(c<71 && c > 64){
+    return c-54;
+  }
+
+  return 0;
+}
+
+//gets username of user woohoo
+char * getUserName(uid_t uid){
+
+  struct passwd *password = getpwuid(uid);
+  if (password != NULL)
+  {
+    return password->pw_name;
+  }
+
+  return "";
+}
+
+int power(int base,int exponent){
+  int i =0;
+  int inbase;
+  if(exponent == 0) return 1;
+  inbase =1;
+  for(i=0; i<exponent; i++){
+    inbase = inbase*base;
+  }
+
+  return inbase;
+}
+
+int gcdRECURSIVE(int x, int y){
+
+  if(x==0){
+    return x;
+  }
+
+  if(y ==0){
+    return y;
+  }
+
+  if(x ==y){
+    return x;
+  }
+
+  if(x>y){
+    return(gcdRECURSIVE((x-y),y));
+  }else{
+    return gcdRECURSIVE(x,(y-x));
+  }
+
+}
+
+void findDay(char** args){
+  char year[4];
+  char yearCen[4];
+  int month,day,yearVal,yearCentury;
+  int weekDay;
+  float f;
+
+
+
+  if(args[4]!=NULL){
+    printf("ERROR:TOO MANY ENTRIES\n");
+  }
+
+  if(args[1] == NULL){
+    printf("INVALID ENTRY\n");
+    return;
+  }else{
+    day = atoi(args[1]);
+  }
+
+
+  if(args[3] == NULL|| strlen(args[3])>4){
+    printf("INVALID ENTRY\n");
+    return;
+  }else{
+
+    strncpy(yearCen, args[3], 2);
+    yearCentury = atoi(yearCen);
+
+    strncpy(year, args[3]+2, 2); 
+    yearVal = atoi(year);
+  }
+
+    if(args[2] == NULL){
+      printf("INVALID ENTRY\n");
+      return;
+    }else{
+      month = atoi(args[2]);
+      if(month < 3){
+        month = month +10;
+        yearVal--;
+      }else{
+        month = month - 2;
+      }
+    }
+
+  f = day + floor((13*month-1)/5) + yearVal + floor(yearVal/4) + floor(yearCentury/4) - (2*yearCentury);
+
+
+  weekDay = ((int)f)%7;
+
+  switch (weekDay) {
+    case 1:
+    printf("It was a monday\n");
+    break;
+    case 2:
+    printf("It was a tuesday\n");
+    break;
+    case 3:
+    printf("It was a Wednesday\n");
+    break;
+    case 4:
+    printf("It was a Thurday\n");
+    break;
+    case 5:
+    printf("It was a Friday\n");
+    break;
+    case 6:
+    printf("It was a Saturday\n");
+    break;
+    case 0:
+    printf("It was a Sunday\n");
+    break;
+    default:
+    printf("something went wrong. I dont know what day it is\n");
+  }
+
 }
