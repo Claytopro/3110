@@ -16,8 +16,8 @@
 #include <math.h>
 
 
-void executeWait(char **arg);
-void executeBackground(char **arg);
+void executeWait(char **arg, int fileBool);
+void executeBackground(char **arg, int fileBool);
 void GCD(char** args);
 void argCount(char **args);
 char * getUserName(uid_t uid);
@@ -38,7 +38,8 @@ int main(){
   char *userID;
   char **args;
   char *argument1 = "NULL";
-  int i=0;
+  int i =0;
+  int fileBool=0;
 
 
   //userID = malloc(sizeof(char)*100);
@@ -71,14 +72,22 @@ int main(){
       findDay(args);
     }else{
 
-      // while(args[i] != NULL) i++;
-      //
-      // if(strcmp(args[i], "&")==0){
-      //   args[i] = NULL;
-      //   executeBackground(args);
-      // }else{
-      // }
-      executeWait(args);
+      while(args[i] != NULL) {
+        if(strcmp(args[i], ">")==0){
+          fileBool =i;
+        }
+        i++;
+      }
+      //brings i back into range
+      i--;
+
+      if(strcmp(args[i], "&") == 0){
+        args[i] = NULL;
+        executeBackground(args,fileBool);
+      }else{
+        executeWait(args,fileBool);
+      }
+
     }
 
 
@@ -87,9 +96,10 @@ int main(){
   return 0;
 }
 
-void executeWait(char **arg){
+void executeWait(char **arg, int fileBool){
   pid_t  pid;
   int    status;
+  FILE *fp;
 
   if ((pid = fork()) < 0) {
        printf("A: forking child process failed\n");
@@ -97,10 +107,18 @@ void executeWait(char **arg){
   }  /* cildprocess should have process id of zero.*/
   else if (pid == 0) {
        /*cool thing to do is run the shell inside the shell */
+       // > or < sign was found at fileBool location in arg
+       if(fileBool != 0){
+         fp = freopen(arg[fileBool+1], "w+", stdout);
+         arg[fileBool] = NULL;
+
+       }
+
        if (execvp(*arg, arg) < 0) {
             printf("ALERT: exec failed\n");
             exit(1);
        }
+       fclose(fp);
   }
   else {
        //loops through until child process is done, waiting for child execution
@@ -109,7 +127,7 @@ void executeWait(char **arg){
 
 }
 
-void executeBackground(char **arg){
+void executeBackground(char **arg,int fileBool){
   pid_t  pid;
 
   if ((pid = fork()) < 0) {
@@ -159,15 +177,19 @@ void GCD(char** args){
 
         first += isHex(num[numlength])*power(16,hexCount);
         hexCount++;
+      }else{
+        printf("INVALID NUM");
+        return;
       }
 
     }
     //number is decimal
   }else{
+    numlength = strlen(num);
     first = atoi(num);
     while(numlength>0){
       numlength--;
-      if(isdigit(num[numlength]) <= 0){
+      if(isdigit(num[numlength]) == 0){
         printf("INVALID ENTRY\n");
         return;
       }
@@ -180,37 +202,39 @@ void GCD(char** args){
   hexCount =0;
 
   if(num[0] == '0' && num[1] == 'x'){
-    numlength = strlen(num);  printf("first:%d:%d\n",first,second );
-
+    numlength = strlen(num);
 
     while(numlength >2){
       numlength--;
       if(isdigit(num[numlength]) > 0){
         second += (num[numlength] - 48) * power(16,hexCount);
-        printf("sec:%d\n",second );
+
         hexCount++;
       }else if(isHex(num[numlength])!=0){
-  printf("first:%d:%d\n",first,second );
 
         second += isHex(num[numlength])*power(16,hexCount);
         hexCount++;
+      }else{
+        printf("INVALID NUM");
+        return;
       }
 
     }
     //number is decimal
   }else{
+    numlength = strlen(num);
     second = atoi(num);
     while(numlength>0){
       numlength--;
-      if(isdigit(num[numlength]) <= 0){
-        printf("INVALID ENTRY\n");
+      if(isdigit(num[numlength]) == 0){
+        printf("INVALID ENTRY \n");
         return;
       }
     }
   }
 
 
-  printf("GCD IS %d\n",gcdRECURSIVE(first,second));
+  printf("GCD(%s,%s) = %d\n",args[1],args[2],gcdRECURSIVE(first,second));
 
 }
 
@@ -321,7 +345,7 @@ void findDay(char** args){
     strncpy(yearCen, args[3], 2);
     yearCentury = atoi(yearCen);
 
-    strncpy(year, args[3]+2, 2); 
+    strncpy(year, args[3]+2, 2);
     yearVal = atoi(year);
   }
 
@@ -345,10 +369,10 @@ void findDay(char** args){
 
   switch (weekDay) {
     case 1:
-    printf("It was a monday\n");
+    printf("It was a Monday\n");
     break;
     case 2:
-    printf("It was a tuesday\n");
+    printf("It was a Tuesday\n");
     break;
     case 3:
     printf("It was a Wednesday\n");
