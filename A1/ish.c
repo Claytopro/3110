@@ -14,13 +14,14 @@
 #include <signal.h>
 #include <pwd.h>
 #include <math.h>
+#include <signal.h>
 
 
 void executeWait(char **arg, int fileBool, int waitBool);
 void executeBackground(char **arg, int fileBool);
 void GCD(char** args);
 void argCount(char **args);
-char * getUserName(uid_t uid);
+char* getUserName(uid_t uid);
 int isHex(int c);
 int power(int base,int exponent);
 int gcdRECURSIVE(int x, int y);
@@ -53,6 +54,7 @@ int main(){
   {
   /* Wait for input */
     if(getuid()==0){
+      printf("rootie\n");
       printf ("[%s@%s]#",userID,hostName);
     }else{
       printf ("[%s@%s]$",userID,hostName);
@@ -106,10 +108,11 @@ void executeWait(char **arg, int fileBool, int waitBool){
   pid_t  pid;
   int    status;
 
+  pid = fork();
 
-  if ((pid = fork()) < 0) {
-       printf("A: forking child process failed\n");
-       exit(1);
+  if (pid < 0) {
+      fprintf(stderr, "usage: %s \n", arg[0]);
+      exit(EXIT_FAILURE);
   }  /* cildprocess should have process id of zero.*/
   else if (pid == 0) {
        /*cool thing to do is run the shell inside the shell */
@@ -128,15 +131,18 @@ void executeWait(char **arg, int fileBool, int waitBool){
        }
 
        if (execvp(*arg, arg) < 0) {
-            printf("ALERT: exec failed\n");
-            exit(1);
+         fprintf(stderr, "usage: %s \n", arg[0]);
+         exit(EXIT_FAILURE);
        }
 
   }
+
       if(waitBool ==0){
         //loops through until child process is done, waiting for child execution
         while (wait(&status) != pid){}
+        //waitpid(pid, NULL, 0);
       }
+
 }
 
 
@@ -148,8 +154,8 @@ void GCD(char** args){
 
   //if there are to many arugments
   if(args[3] != NULL || args[2] ==NULL || args[1]==NULL) {
-    printf("INVALID NUMBER OF ARGUMENTS\n");
-    return ;
+    fprintf(stderr, "usage: %s number1 number2\n", args[0]);
+    exit(EXIT_FAILURE);
   }
 
   num = args[1];
@@ -173,8 +179,8 @@ void GCD(char** args){
         first += isHex(num[numlength])*power(16,hexCount);
         hexCount++;
       }else{
-        printf("INVALID NUM");
-        return;
+        fprintf(stderr, "usage: %s number1 number2\n", args[0]);
+        exit(EXIT_FAILURE);
       }
 
     }
@@ -185,8 +191,8 @@ void GCD(char** args){
     while(numlength>0){
       numlength--;
       if(isdigit(num[numlength]) == 0){
-        printf("INVALID ENTRY\n");
-        return;
+        fprintf(stderr, "usage: %s number1 number2\n", args[0]);
+        exit(EXIT_FAILURE);
       }
     }
   }
@@ -210,7 +216,8 @@ void GCD(char** args){
         second += isHex(num[numlength])*power(16,hexCount);
         hexCount++;
       }else{
-        printf("INVALID NUM");
+        fprintf(stderr, "usage: %s number1 number2\n", args[0]);
+        exit(EXIT_FAILURE);
         return;
       }
 
@@ -222,8 +229,8 @@ void GCD(char** args){
     while(numlength>0){
       numlength--;
       if(isdigit(num[numlength]) == 0){
-        printf("INVALID ENTRY \n");
-        return;
+        fprintf(stderr, "usage: %s number1 number2\n", args[0]);
+        exit(EXIT_FAILURE);
       }
     }
   }
@@ -252,6 +259,7 @@ void argCount(char **args){
 
 //checks if it is a hexadecimal letter A-F, return if false
 //returns value of letter if it is valid
+//used to check if value is hex and get value of the hexidecimal in decimal
 int isHex(int c){
   // valid lower case hex
   if(c <103 && c>96){
@@ -265,7 +273,7 @@ int isHex(int c){
   return 0;
 }
 
-//gets username of user woohoo
+//gets username of user, woohoo
 char * getUserName(uid_t uid){
 
   struct passwd *password = getpwuid(uid);
@@ -273,15 +281,16 @@ char * getUserName(uid_t uid){
   {
     return password->pw_name;
   }
-
+  //returns blank if it doesnt work
   return "";
 }
 
 int power(int base,int exponent){
   int i =0;
-  int inbase;
-  if(exponent == 0) return 1;
-  inbase =1;
+  int inbase = 1;
+
+  if(exponent == 0) return inbase;
+
   for(i=0; i<exponent; i++){
     inbase = inbase*base;
   }
@@ -289,28 +298,16 @@ int power(int base,int exponent){
   return inbase;
 }
 
+//Euclids algorithm for finding greatest common divisor
 int gcdRECURSIVE(int x, int y){
 
-  if(x==0){
-    return x;
-  }
-
-  if(y ==0){
-    return y;
-  }
-
-  if(x ==y){
-    return x;
-  }
-
-  if(x>y){
-    return(gcdRECURSIVE((x-y),y));
-  }else{
-    return gcdRECURSIVE(x,(y-x));
-  }
+  if (x == 0)
+       return y;
+   return gcdRECURSIVE(y%x, x);
 
 }
 
+//custom command that will return day of the week for the entered date
 void findDay(char** args){
   char year[4];
   char yearCen[4];
@@ -321,22 +318,23 @@ void findDay(char** args){
 
 
   if(args[4]!=NULL){
-    printf("ERROR:TOO MANY ENTRIES\n");
+    fprintf(stderr, "usage: %s day month year\n", args[0]);
+    exit(EXIT_FAILURE);
   }
 
-  if(args[1] == NULL){
-    printf("INVALID ENTRY\n");
-    return;
+  if(args[1] == NULL || args[2] == NULL || args[3] == NULL){
+    fprintf(stderr, "usage: %s day month year\n", args[0]);
+    exit(EXIT_FAILURE);
   }else{
     day = atoi(args[1]);
   }
 
 
   if(args[3] == NULL|| strlen(args[3])>4){
-    printf("INVALID ENTRY\n");
-    return;
+    fprintf(stderr, "usage: %s day month year\n", args[0]);
+    exit(EXIT_FAILURE);
   }else{
-
+    //gets the year and breaks it up by first and last 2 digits
     strncpy(yearCen, args[3], 2);
     yearCentury = atoi(yearCen);
 
@@ -345,8 +343,8 @@ void findDay(char** args){
   }
 
     if(args[2] == NULL){
-      printf("INVALID ENTRY\n");
-      return;
+      fprintf(stderr, "usage: %s day month year\n", args[0]);
+      exit(EXIT_FAILURE);
     }else{
       month = atoi(args[2]);
       if(month < 3){
@@ -359,7 +357,7 @@ void findDay(char** args){
 
   f = day + floor((13*month-1)/5) + yearVal + floor(yearVal/4) + floor(yearCentury/4) - (2*yearCentury);
 
-
+  //typecast it yo
   weekDay = ((int)f)%7;
 
   switch (weekDay) {
