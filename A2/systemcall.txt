@@ -1,0 +1,8 @@
+Model: Dell inspiron 1500
+CPU: Intel(R) Core(TM) i5-7300HQ CPU @ 2.50GHz
+5RAM: 8GB
+Harddisk: 82801 Mobile SATA Controller [RAID mode]
+OS: Ubuntu 18.04 LTS
+VirtualBox version: N/A
+
+	The output of the program shows how the UNIX system calls are much slower at reading in from a file when reading in smaller amounts of data. But as the size of data grows the performance of both functions begins to become similar. This is because read is low level system call and has no buffering therefore you will be using the kernel for each call, hence why reading in 1 byte at a time results in a huge weakness in performance. Clearly as the buffersize increases there is less of a reason to use either one, in fact if the individual decided to read in the whole file at once the difference in performance would be negligable. Furthermore since fread is a built in libararie the functionality is more predictable than using the system call read.

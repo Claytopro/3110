@@ -1,0 +1,24 @@
+Using Unix I/O systems calls to read a file by 1 bytes per read
+filename's elapsed time	= 449523
+Using C functions to read a file by 1 bytes per read
+filename's elapsed time	= 2156
+Using Unix I/O systems calls to read a file by 256 bytes per read
+filename's elapsed time	= 2098
+Using C functions to read a file by 256 bytes per read
+filename's elapsed time	= 328
+Using Unix I/O systems calls to read a file by 512 bytes per read
+filename's elapsed time	= 1227
+Using C functions to read a file by 512 bytes per read
+filename's elapsed time	= 289
+Using Unix I/O systems calls to read a file by 1024 bytes per read
+filename's elapsed time	= 569
+Using C functions to read a file by 1024 bytes per read
+filename's elapsed time	= 269
+Using Unix I/O systems calls to read a file by 2048 bytes per read
+filename's elapsed time	= 341
+Using C functions to read a file by 2048 bytes per read
+filename's elapsed time	= 255
+Using Unix I/O systems calls to read a file by 2096 bytes per read
+filename's elapsed time	= 377
+Using C functions to read a file by 2096 bytes per read
+filename's elapsed time	= 266
