@@ -1,6 +1,6 @@
 all: ish
 ish: ish.o lex.yy.o
-	gcc -o ish ish.o lex.yy.o -lfl  
+	gcc -o ish ish.o lex.yy.o -lfl -lm
 ish.o: ish.c
 	gcc -Wall -g -c ish.c
 lex.yy.o: lex.yy.c
