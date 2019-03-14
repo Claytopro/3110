@@ -1,7 +1,7 @@
 /*
 By:Clayton Provan
 Assignement 3
-
+march 12th
 */
 
 
@@ -54,13 +54,15 @@ void printQueue(qHead *front);
 void deleteQueue(qHead *front);
 
 
-int main(){
+int main(int argc, char *argv[]){
   FILE *fp;
   char buffer[80];
   char eventType ;
   char *temp = NULL;
   int time = 0;
   int processID=0;
+  char* filename;
+
 
   qHead *readyQueue = initializeHead();
   //only need on queue because there will never be an out of line resource request for something not running
@@ -71,16 +73,16 @@ int main(){
   Node *system = initlizeNode(0);
   system->runStart = 0;
 
+  filename = argv[1];
 
-  fp=fopen("test4.in","r");
+  fp=fopen(filename,"r");
 
   while(fgets(buffer, 80,fp) ){
-    printf("buf:%s",buffer );
+
     if(strcmp(buffer,"\n")==0)break;
 
     temp = strtok(buffer," ");
     time = atoi(temp);
-
 
     //  printf("%s\n", temp);
       temp = strtok(NULL," ");
@@ -107,7 +109,6 @@ int main(){
           temp = strtok(NULL," ");
           processID = atoi(temp);
           //search through all queues to find
-          printQueue(readyQueue);
 
           tmpProcess = removeFromQueue(readyQueue,processID);
           //if tmp process was not in ready queue,
@@ -143,15 +144,62 @@ int main(){
 
         break;
         case 'R':
+          temp = strtok(NULL," ");
+          temp = strtok(NULL," ");
+          processID = atoi(temp);
+
+          tmpProcess = removeFromQueue(readyQueue,processID);
+
+          //if that process was running (head of ready queue)
+          if(tmpProcess->state == 1){
+            tmpProcess->runEnd =time;
+            tmpProcess->runTotal += (tmpProcess->runEnd - tmpProcess->runStart);
+            tmpProcess->blckStart = time;
+            tmpProcess->state =3;
+            addToQueue(resourceQueue,tmpProcess);
+
+            if(readyQueue->head != NULL){
+              tmpProcess=readyQueue->head;
+
+              tmpProcess->rdyEnd = time;
+              tmpProcess->rdyTotal += (tmpProcess->rdyEnd - tmpProcess->rdyStart);
+              tmpProcess->runStart = time;
+              tmpProcess->state =1;
+            }else{
+              //wait time stuff here
+            }
+
+          }else{
+            tmpProcess->rdyEnd =time;
+            tmpProcess->rdyTotal += (tmpProcess->rdyEnd - tmpProcess->rdyStart);
+            tmpProcess->blckStart = time;
+            tmpProcess->state =3;
+            addToQueue(resourceQueue,tmpProcess);
+          }
 
         break;
         case 'I':
+          temp = strtok(NULL," ");
+          temp = strtok(NULL," ");
+          processID = atoi(temp);
+
+          //remove resource from queue and and calculate total time in block state
+          tmpProcess = removeFromQueue(resourceQueue,processID);
+          tmpProcess->blckEnd = time;
+          tmpProcess->blckTotal += (tmpProcess->blckEnd - tmpProcess->blckStart);
+
+          addToQueue(readyQueue,tmpProcess);
+          if(readyQueue->length == 1){
+            tmpProcess->state = 1;
+            tmpProcess->runStart = time;
+          }else{
+            tmpProcess->state = 2;
+            tmpProcess->rdyStart = time;
+          }
 
         break;
         case 'T':
-          printf("Queue is currenlt :\n" );
-          printQueue(readyQueue);
-          //if queue is not 1 then remove from and and add to end of queue
+          //if queue holds more than 1 process then remove from and and add to end of queue
           if(readyQueue->length !=1){
             tmpProcess = removeFromHead(readyQueue);
             tmpProcess->runEnd =time;
@@ -167,9 +215,6 @@ int main(){
             tmpProcess->state =1;
 
           }
-
-          printf("Queue became :\n" );
-          printQueue(readyQueue);
         break;
         default:
           printf("invalid file, event not recognized\n" );
@@ -177,14 +222,15 @@ int main(){
 
   }
 
- printQueue(exitQueue);
+  printQueue(exitQueue);
 
+  //free mememory
   deleteQueue(readyQueue);
   deleteQueue(resourceQueue);
   deleteQueue(exitQueue);
   free(system);
-
   fclose(fp);
+
   return 1;
 }
 
@@ -213,6 +259,9 @@ Node* initlizeNode(int pID){
   return temp;
 }
 
+/*
+  adds node to end of queue
+*/
 void addToQueue(qHead *front,Node*toadd){
 
     if(front ==NULL || toadd ==NULL){
@@ -233,6 +282,9 @@ void addToQueue(qHead *front,Node*toadd){
     front->length = front->length +1;
 }
 
+/*
+removes node from head of queue and moves queue accordingly
+*/
 Node* removeFromHead(qHead *front){
     Node*temp = front->head;
     front->head = temp->previous;
@@ -246,10 +298,13 @@ Node* removeFromHead(qHead *front){
     return temp;
 }
 
+/*
+prints out information held within a queue
+*/
 void printQueue(qHead *front){
 
   Node *temp = front->tail;
-  printf("QUEUE:\n" );
+
   while(temp != NULL){
     printf("process ID :%d ,run Time: %d, Block time: %d, ready time %d\n",temp->processID,temp->runTotal,temp->blckTotal,temp->rdyTotal);
     temp = temp->next;
@@ -257,6 +312,9 @@ void printQueue(qHead *front){
 
 }
 
+/*
+frees all mememory associated with given queue
+*/
 void deleteQueue(qHead *front){
   Node *temp1;
   Node *temp2;
@@ -267,7 +325,7 @@ void deleteQueue(qHead *front){
   while(temp1 !=NULL){
 
     temp2 = temp1->next;
-    printf("freeing process ID %d\n",temp1->processID);
+    //printf("freeing process ID %d\n",temp1->processID);
     free(temp1);
     temp1 =temp2;
   }
@@ -276,13 +334,14 @@ void deleteQueue(qHead *front){
 }
 
 
-//used as for exit call
+/*
+removes node from queue based on input process ID
+*/
 Node* removeFromQueue(qHead *front,int findID){
 
   Node *temp = front->tail;
 
-
-
+  //when searched for ID is the tail of function
   if(temp->processID == findID){
     if(front->length ==1){
 
@@ -290,43 +349,46 @@ Node* removeFromQueue(qHead *front,int findID){
       front->tail = NULL;
       temp->next = NULL;
       temp->previous = NULL;
+      front->length--;
+
       return temp;
     }
 
     front->tail = temp->next;
     temp->next->previous = NULL;
     front->length--;
-
     temp->next = NULL;
     temp->previous = NULL;
+
     return temp;
   }
 
   while(temp != NULL){
 
     if(temp->processID == findID){
-
+      //if found node is head of function
         if(temp == front->head){
           front->head = temp->previous;
           temp->previous->next = NULL;
           front->length--;
-
           temp->next = NULL;
           temp->previous = NULL;
+
           return temp;
         }
 
         temp->previous->next = temp->next;
         temp->next->previous = temp->previous;
         front->length--;
-
         temp->next = NULL;
         temp->previous = NULL;
+
         return temp;
     }
 
     temp = temp->next;
   }
 
+  //if nothing is found return NULL
   return NULL;
 }
