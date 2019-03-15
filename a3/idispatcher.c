@@ -54,14 +54,14 @@ void printQueue(qHead *front);
 void deleteQueue(qHead *front);
 
 
-int main(int argc, char *argv[]){
-  FILE *fp;
+int main(){
+
   char buffer[80];
   char eventType ;
   char *temp = NULL;
   int time = 0;
   int processID=0;
-  char* filename;
+
 
 
   qHead *readyQueue = initializeHead();
@@ -72,17 +72,28 @@ int main(int argc, char *argv[]){
   Node *tmpProcess;
   Node *system = initlizeNode(0);
   system->runStart = 0;
+  system->state = 1;
 
-  filename = argv[1];
 
-  fp=fopen(filename,"r");
-
-  while(fgets(buffer, 80,fp) ){
+  while(fgets(buffer, 80,stdin) ){
 
     if(strcmp(buffer,"\n")==0)break;
+    //while the
+    if(readyQueue->head == NULL &&system->state ==1){
 
+      system->state = 1;
+    //  printf("system is waiting @ %d\n",time );
+    }else{
+      if(system->state ==1){
+        //printf("system no longer waiting at %d\n",time );
+        system->runEnd = time;
+        system->runTotal += (system->runEnd - system->runStart);
+      }
+      system->state = 0;
+    }
     temp = strtok(buffer," ");
     time = atoi(temp);
+    //if nothing ready then system in wait
 
     //  printf("%s\n", temp);
       temp = strtok(NULL," ");
@@ -130,6 +141,9 @@ int main(int argc, char *argv[]){
                 tmpProcess->rdyTotal += (tmpProcess->rdyEnd - tmpProcess->rdyStart);
                 tmpProcess->runStart = time;
                 tmpProcess->state =1;
+              }else{
+                system->runStart = time;
+                system->state =1;
               }
 
             }else{
@@ -158,15 +172,16 @@ int main(int argc, char *argv[]){
             tmpProcess->state =3;
             addToQueue(resourceQueue,tmpProcess);
 
+            //if the ready que did not become empty move new (current head), into running state
             if(readyQueue->head != NULL){
               tmpProcess=readyQueue->head;
-
               tmpProcess->rdyEnd = time;
               tmpProcess->rdyTotal += (tmpProcess->rdyEnd - tmpProcess->rdyStart);
               tmpProcess->runStart = time;
               tmpProcess->state =1;
             }else{
-              //wait time stuff here
+              system->runStart = time;
+                system->state =1;
             }
 
           }else{
@@ -222,6 +237,7 @@ int main(int argc, char *argv[]){
 
   }
 
+  printf("0 %d\n",system->runTotal);
   printQueue(exitQueue);
 
   //free mememory
@@ -229,7 +245,7 @@ int main(int argc, char *argv[]){
   deleteQueue(resourceQueue);
   deleteQueue(exitQueue);
   free(system);
-  fclose(fp);
+
 
   return 1;
 }
@@ -268,6 +284,7 @@ void addToQueue(qHead *front,Node*toadd){
       printf("passed in null to add queue\n");
       return;
     }
+    //if front is null then whole queue is null and we set input to head and tail
     if(front->head == NULL){
       front->head = toadd;
       front->tail =toadd;
@@ -299,17 +316,40 @@ Node* removeFromHead(qHead *front){
 }
 
 /*
+sorted quque then prints it out
 prints out information held within a queue
 */
 void printQueue(qHead *front){
 
-  Node *temp = front->tail;
+  if(front == NULL) return;
 
-  while(temp != NULL){
-    printf("process ID :%d ,run Time: %d, Block time: %d, ready time %d\n",temp->processID,temp->runTotal,temp->blckTotal,temp->rdyTotal);
-    temp = temp->next;
+  Node *tmp2;
+  Node *temp;
+  qHead *sortedQue = initializeHead();
+
+  //sort que
+  while(front->head != NULL){
+
+    temp = front->tail;
+    tmp2 =temp;
+    while(temp != NULL){
+      if(temp->processID < tmp2->processID){
+        tmp2 = temp;
+      }
+      temp = temp->next;
+    }
+    //remove from input queue and to front of sorted queue
+    tmp2 = removeFromQueue(front,tmp2->processID);
+    addToQueue(sortedQue,tmp2);
+
   }
 
+  tmp2 = sortedQue->head;
+  while(tmp2 != NULL){
+    printf("%d %d %d %d\n",tmp2->processID,tmp2->runTotal,tmp2->rdyTotal,tmp2->blckTotal);
+    tmp2 = tmp2->previous;
+  }
+  deleteQueue(sortedQue);
 }
 
 /*
